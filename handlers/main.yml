@@ -1,0 +1,12 @@
+---
+# handlers file for roles/nxos_prepare
+- name: Disable NXAPI
+  nxos_nxapi:
+    host: "{{ inventory_hostname }}"
+    username: "{{ switch_username }}"
+    password: "{{ switch_password }}"
+    enabled: false
+    write: true
+  when: nxapi_status|changed and disable_nxapi
+  tags:
+    - always

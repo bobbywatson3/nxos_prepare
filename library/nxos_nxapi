@@ -1,0 +1,186 @@
+#!/usr/bin/env python
+
+# Copyright Cisco Systems
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+DOCUMENTATION = '''
+---
+
+module: nxos_nxapi
+
+short_description: Enables/disables NX-API.
+
+description:
+    - Enables/disables NX-API via SSH.
+
+author: Bobby Watson (bwatsoni@cisco.com)
+
+requirements:
+    - Cisco NX-OS
+    - pexpect
+
+notes:
+    - Can be used to enable NX-API before using modules that require NX-API,
+    and can be notified as a handler to disable NX-API after all tasks have run.
+
+options:
+    host:
+        description:
+            - Host NXOS device to enable/disable NX-API on.
+        required: true
+        default: null
+
+    username:
+        description:
+            - Username used to login to NXOS device.
+        required: true
+        default: null
+
+    password:
+        description:
+            - Password used to login to NXOS device.
+        required: true
+        default: null
+
+    enabled:
+        description:
+            - Set to 'true' to enable NX-API, 'false' to disable.
+        required: true
+        choices: [true, false]
+
+    write:
+        description:
+            - Write config after changes.
+        required: false
+        choices: [true, false]
+        default: true
+
+'''
+
+EXAMPLES = '''
+- name: Enable NXAPI
+  nxos_nxapi:
+    host: "{{ inventory_hostname }}"
+    username: user
+    password: password
+    enabled: true
+    write: true
+'''
+from pexpect import pxssh
+import pexpect
+from time import sleep
+
+
+def set_nxapi(module, host, username, password, enabled, write):
+    for attempt in range(5):
+        try:
+            p = pxssh.pxssh(options={"StrictHostKeyChecking": "no",
+                                     "UserKnownHostsFile": "/dev/null"})
+            # Enable the following line if you need to see all output. This will
+            # make Ansible think that there was an error however.
+            # p.logfile = sys.stdout
+            p.force_password = True
+            p.login(host, username, password, auto_prompt_reset=False)
+            p.PROMPT = '\r\n.*# '
+
+            # Make sure switch doesn't send any /b literals due to term width
+            p.sendline(' terminal width 511')
+            # Make sure switch is running NXOS
+            i = p.expect([p.PROMPT, "(?i)bash"])
+            if i == 0:
+                pass
+            if i == 1:
+                module.fail_json(msg="switch not running NXOS")
+            p.prompt()
+
+            # If check mode enabled, see if file already exists.
+            if module.check_mode:
+                p.sendline('show run')
+                i = p.expect(["feature nxapi", "(?i)Incorrect command", pexpect.TIMEOUT], timeout=5)
+                if i == 0:
+                    if enabled:
+                        module.exit_json(changed=False, nxapi_enabled=True)
+                    else:
+                        module.exit_json(changed=True, nxapi_enabled=True)
+                if i == 1:
+                    module.fail_json(msg="switch not running NXOS")
+                if i == 2:
+                    if enabled:
+                        module.exit_json(changed=True, nxapi_enabled=False)
+                    else:
+                        module.exit_json(changed=False, nxapi_enabled=False)
+
+            p.sendline("conf t")
+            i = p.expect(["(?i)command not found", p.PROMPT])
+            if i == 0:
+                module.fail_json(msg="switch not running NXOS")
+            if i == 1:
+                pass
+            if enabled:
+                p.sendline("feature nxapi")
+            else:
+                p.sendline("no feature nxapi")
+            p.prompt()
+            p.sendline("exit")
+            p.prompt()
+            if write:
+                for attempt in range(5):
+                    p.sendline("copy run start")
+                    i = p.expect(['(?i)copy complete', '(?i)system not ready', pexpect.TIMEOUT])
+                    if i == 0:
+                        p.logout()
+                        module.exit_json(changed=True, nxapi_enabled=enabled, write_config=write)
+                    if i == 1:
+                        sleep(30)
+                        continue
+                    if i == 1:
+                        p.logout()
+                        module.fail_json(msg="Error writing config")
+            else:
+                p.logout()
+                module.exit_json(changed=True, nxapi_enabled=enabled, write_config=write)
+
+        except (pxssh.ExceptionPxssh, pexpect.exceptions.TIMEOUT) as e:
+            continue
+        except (pexpect.exceptions.EOF) as unreachable:
+            module.fail_json(msg="Error connecting. Is {} reachable from your computer?".format(host))
+    # If all retries fail, error out
+    else:
+        p.close()
+        module.fail_json(msg="Login Error: {}".format(e))
+
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            host=dict(required=True, type='str'),
+            username=dict(required=True, type='str'),
+            password=dict(required=True, type='str', no_log=True),
+            enabled=dict(required=True, type='bool'),
+            write=dict(required=False, default=True, type='bool')
+        ),
+        supports_check_mode=True,
+    )
+
+    host = module.params['host']
+    username = module.params['username']
+    password = module.params['password']
+    enabled = module.params['enabled']
+    write = module.params['write']
+
+    set_nxapi(module, host, username, password, enabled, write)
+
+from ansible.module_utils.basic import *
+if __name__ == '__main__':
+    main()

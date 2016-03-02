@@ -1,0 +1,12 @@
+---
+- hosts: localhost
+  connection: local
+  gather_facts: yes
+  force_handlers: True
+
+  vars:
+    switch_username: user
+    switch_password: password
+
+  roles:
+    - nxos_prepare

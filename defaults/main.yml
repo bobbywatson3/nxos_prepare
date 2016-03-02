@@ -1,0 +1,6 @@
+bootflash_conf_file: "bootflash:/configs/{{ ansible_date_time.iso8601 }}_config_backup.cfg"
+running_conf_file: "{{ playbook_dir }}/config_backup/{{ inventory_hostname }}-{{ ansible_date_time.iso8601 }}.txt"
+running_config_dir: "{{ playbook_dir }}/config_backup/"
+overwrite_bootflash_config: true
+disable_nxapi: True
+backup: True
