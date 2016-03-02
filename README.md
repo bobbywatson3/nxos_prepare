@@ -1,6 +1,6 @@
 nxos_prepare
 =========
-
+[![Build Status](https://travis-ci.org/robertwatson3/nxos_prepare.svg?branch=master)](https://travis-ci.org/robertwatson3/nxos_prepare)
 This role enables NXAPI, saves running config to startup config, saves running config to bootflash, and saves running config to local machine. When any other roles are complete, NXAPI can then be disabled using a handler.
 
 Requirements
@@ -23,7 +23,7 @@ backup: If false, config is not written, and no copies are made on switch or loc
 
 Example Playbook
 ----------------
-
+```YAML
 ---
 - hosts: nxos
   connection: local
@@ -44,7 +44,7 @@ Example Playbook
 
   roles:
     - nxos_prepare
-
+```
 License
 -------
 
