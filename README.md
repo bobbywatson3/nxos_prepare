@@ -1,6 +1,6 @@
 nxos_prepare
 =========
-[![Build Status](https://travis-ci.org/robertwatson3/nxos_prepare.svg?branch=master)](https://travis-ci.org/robertwatson3/nxos_prepare)
+[![Build Status](https://travis-ci.org/bobbywatson3/nxos_prepare.svg?branch=master)](https://travis-ci.org/robertwatson3/nxos_prepare)
 
 This role enables NXAPI, saves running config to startup config, saves running config to bootflash, and saves running config to local machine. When any other roles are complete, NXAPI can then be disabled using a handler.
 
