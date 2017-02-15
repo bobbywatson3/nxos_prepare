@@ -20,15 +20,6 @@
       save: True
     when: backup
 
-  - name: Delete old config backup
-    nxos_dir:
-      host: "{{ inventory_hostname }}"
-      username: "{{ switch_username }}"
-      password: "{{ switch_password }}"
-      path: "{{ bootflash_conf_file }}"
-      state: absent
-    when: overwrite_bootflash_config and backup
-
   - name: Backup running config to local device
     nxos_config:
       host: "{{ inventory_hostname }}"
