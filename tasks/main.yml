@@ -13,10 +13,11 @@
       - Disable NXAPI
 
   - name: Write config
-    nxos_save_config:
+    nxos_config:
       host: "{{ inventory_hostname }}"
       username: "{{ switch_username }}"
       password: "{{ switch_password }}"
+      save: True
     when: backup
 
   - name: Delete old config backup
@@ -28,38 +29,14 @@
       state: absent
     when: overwrite_bootflash_config and backup
 
-  - name: Backup running config to bootflash
-    nxos_save_config:
+  - name: Backup running config to local device
+    nxos_config:
       host: "{{ inventory_hostname }}"
       username: "{{ switch_username }}"
       password: "{{ switch_password }}"
-      path: "{{ bootflash_conf_file }}"
+      backup: True
     when: backup
 
-  - name: Get running config
-    nxos_command:
-      command: "show run"
-      host: "{{ inventory_hostname }}"
-      username: "{{ switch_username }}"
-      password: "{{ switch_password }}"
-      type: show
-      text: true
-    register: running_config
-    when: backup
-
-  - name: Create local directory to store config backups
-    file:
-      path: "{{ running_config_dir }}"
-      state: directory
-    when: backup
-
-  - name: Save running config to local file
-    copy:
-      content: "{{ running_config.response[0].body }}"
-      dest: "{{ running_conf_file }}"
-      backup: yes
-    register: backup_filename
-    when: backup
 
   # tag entire block
   tags:
